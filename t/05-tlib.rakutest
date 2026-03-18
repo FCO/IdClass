@@ -1,0 +1,19 @@
+use Test;
+use lib "t/lib";
+use TestIds;
+use SingleId;
+
+my $customer = CustomerId.new;
+isa-ok $customer, CustomerId, "CustomerId from t/lib";
+is $customer.prefix, "CustomerId", "CustomerId prefix";
+
+my $invoice = InvoiceId.new;
+isa-ok $invoice, InvoiceId, "InvoiceId from t/lib";
+is $invoice.prefix, "INV", "InvoiceId prefix";
+like $invoice.Str, /^ "INV" "-" \w+ "-" \w+ $/, "InvoiceId Str format";
+
+my $single = OnlyId.new;
+isa-ok $single, OnlyId, "OnlyId from SingleId";
+is $single.prefix, "ONE", "OnlyId prefix";
+
+done-testing;

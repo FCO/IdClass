@@ -1,0 +1,14 @@
+use Test;
+use IdClass;
+
+my \AlphaId = id-class("AlphaId");
+my \BetaId = id-class("BetaId");
+
+my $single = AlphaId.export;
+ok $single<AlphaId>:exists, "single export includes type";
+
+my $all = IdClass.export;
+ok $all<AlphaId>:exists, "all export includes AlphaId";
+ok $all<BetaId>:exists, "all export includes BetaId";
+
+done-testing;

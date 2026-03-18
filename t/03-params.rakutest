@@ -1,0 +1,11 @@
+use Test;
+use IdClass;
+
+my @chars = <A B C 1 2 3>;
+my \TinyId = id-class("TinyId", "T", 27, @chars);
+my $id = TinyId.new;
+
+is $id.prefix, "T", "custom prefix";
+is $id.Str.chars, "T".chars + 28, "custom size reflected in Str length";
+
+done-testing;

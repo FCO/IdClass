@@ -1,0 +1,15 @@
+use Test;
+use IdClass;
+
+my \UserId = id-class("UserId");
+my $id = UserId.new;
+
+isa-ok $id, IdClass, "instance does IdClass";
+is $id.prefix, "UserId", "prefix is set";
+like $id.Str, /^ "UserId" "-" \w+ "-" \w+ $/, "Str format includes prefix, ts, rest";
+is $id.gist, $id.Str, "gist delegates to Str";
+
+my $expected-length = "UserId".chars + 40 + 1;
+is $id.Str.chars, $expected-length, "Str length matches prefix + size + 1";
+
+done-testing;

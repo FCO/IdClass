@@ -1,0 +1,15 @@
+use Test;
+use IdClass;
+
+my \OrderId = id-class("OrderId");
+my $original = OrderId.new;
+my IdClass() $coerced = $original.Str;
+
+isa-ok $coerced, OrderId, "type constraint coerce returns correct type";
+is $coerced.Str, $original.Str, "type constraint coerce preserves value";
+
+dies-ok { my IdClass() $bad = "Unknown-abc-def" }, "unknown prefix dies";
+
+dies-ok { my IdClass() $bad = "bad-format" }, "invalid format dies";
+
+done-testing;
