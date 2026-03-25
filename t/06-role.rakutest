@@ -1,0 +1,65 @@
+use IdClass;
+use Test;
+
+my IdClass() $id;
+
+my \Id1 = id-class "Id1";
+ok my Str() $id1 = Id1.new;
+$id = $id1;
+isa-ok $id, Id1;
+is $id, $id1;
+
+my &a1 := -> IdClass() $a, Str() $b = $a {
+	isa-ok $a, Id1;
+	is $a, $b;
+	b1 $a
+}
+
+my &b1 := -> IdClass $a, Str() $b = $a {
+	isa-ok $a, Id1;
+	is $a, $b;
+}
+
+a1 $id.Str;
+
+class Id2 does IdClass["Id2"] {}
+ok my $id2 = Id2.new;
+$id = $id2;
+isa-ok $id, Id2;
+is $id, $id2;
+
+my &a2 := -> Id2() $a, Str() $b = $a {
+	isa-ok $a, Id2;
+	is $a, $b;
+	b2 $a
+}
+
+my &b2 := -> Id2 $a, Str() $b = $a {
+	isa-ok $a, Id2;
+	is $a, $b;
+}
+
+a2 $id.Str;
+
+class Id3 does IdClass {
+	method prefix { "Id3" }
+}
+ok my $id3 = Id3.new;
+$id = $id3;
+isa-ok $id, Id3;
+is $id, $id3;
+
+my &a3 := -> Id3() $a, Str() $b = $a {
+	isa-ok $a, Id3;
+	is $a, $b;
+	b3 $a
+}
+
+my &b3 := -> Id3 $a, Str() $b = $a {
+	isa-ok $a, Id3;
+	is $a, $b;
+}
+
+a3 $id.Str;
+
+done-testing

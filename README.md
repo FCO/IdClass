@@ -3,7 +3,7 @@
 NAME
 ====
 
-IdClass - lightweight typed identifiers with prefixes
+IdClass - role and factory for typed string IDs
 
 SYNOPSIS
 ========
@@ -11,149 +11,150 @@ SYNOPSIS
 ```raku
 use IdClass;
 
-my $UserId = id-class('UserId', 'usr');
-my $OrderId = id-class('OrderId', 'ord', 36);
+class BlaId does IdClass {
+    method prefix { "BLA" }
+}
 
-my $uid = $UserId.new;
-say $uid.Str;          # usr-<timestamp>-<random>
-say $uid.gist;         # same as Str
+my BlaId $id = BlaId.new;
+say $id;              # BLA-<ts>-<rest>
 
-my $oid = $OrderId.new;
-my IdClass() $from = $uid.Str;
+my Str $raw = $id.Str;
+my BlaId $from-str = BlaId($raw);
+say $from-str === $id; # True
+
+sub load-item(BlaId() $item-id) {
+    say "loading {$item-id}";
+}
+
+load-item $raw;   # coerces Str into BlaId
+
+# Optional factory for a new type
+my \OrderId = id-class "OrderId";
+my OrderId $order-id = OrderId.new;
 ```
 
 DESCRIPTION
 ===========
 
-IdClass provides a role that generates compact, sortable, and type-dispatchable identifiers using a prefix, a timestamp, and a random suffix. Each id has the format:
+IdClass provides a compact, typed identifier object with predictable string format and fast coercion from strings. The default string representation is:
 
-    <prefix>-<timestamp>-<random>
+    PREFIX-TS-REST
 
-The timestamp is encoded in a base-like alphabet (default digits and ASCII letters). The random part is generated from the same alphabet by default, and the total length can be tuned per id class.
+Where `PREFIX` is a short, human-readable prefix, `TS` is a time-based segment, and `REST` is a random segment. The role can be used directly in a class with a custom `prefix` method, or via the `id-class` factory.
 
-EXPORTS
-=======
-
-id-class
---------
+ROLE
+====
 
 ```raku
-sub id-class(Str $name, Str $prefix = $name, UInt $size?, @chars?) is export
+role IdClass[Str $prefix = "", UInt $size = 40, @chars = @default-chars]
 ```
 
-Creates and returns a new id class type. The type composes the IdClass role with the provided parameters and is registered for COERCE lookups by prefix.
-
-ROLE PARAMETERS
-===============
-
-$prefix
--------
-
-String used as the id prefix. Also used to register the type for COERCE.
-
-$size
------
-
-Total size for the id body. The final output length includes the prefix and two dashes. The timestamp portion is generated first and the remaining characters are used for the random suffix.
-
-@chars
-------
-
-Alphabet used for timestamp encoding and random generation. Defaults to digits plus ASCII letters.
+The role parameter `$prefix` sets a default prefix used for stringification and coercion. The generated identifier length depends on `$size` and the current timestamp length. The optional `@chars` controls the character set used for the random portion when generating identifiers.
 
 METHODS
 =======
 
+prefix
+------
+
+```raku
+method prefix
+```
+
+Returns the prefix string. When using the role without a fixed parameter, you can override this method in your class to supply the prefix.
+
 Str
 ---
 
-Stringifies the id as `prefix-timestamp-random`.
+```raku
+method Str
+```
+
+Returns the canonical string representation `PREFIX-TS-REST`.
 
 gist
 ----
 
-Returns the same output as `Str`.
+```raku
+method gist
+```
+
+Same as `Str`.
 
 COERCE
 ------
 
 ```raku
-my IdClass() $id = 'usr-...';
+method COERCE(Str $id)
 ```
 
-Parses a string and returns a new instance of the matching id class when used through type constraints. Dies if the string is not a valid id.
+Coerces a string into an appropriate IdClass-derived type based on the prefix in the string, or into the current class when the prefix matches.
 
-export
-------
-
-On IdClass type, returns a map of exported id classes for convenient import.
-
-USAGE
-=====
-
-Basic id types
---------------
+WHICH
+-----
 
 ```raku
-my $UserId = id-class('UserId', 'usr');
-my $InvoiceId = id-class('InvoiceId', 'inv', 48);
-
-my $user = $UserId.new;
-say $user.Str;  # usr-...
+method WHICH
 ```
 
-Parsing and validation
-----------------------
+Provides identity semantics based on the class name and string value.
 
-```raku
-my $value = 'usr-abc-def';
-my IdClass() $id = $value;  # returns a UserId instance
-
-# invalid prefix or format throws
-```
-
-Custom alphabets
-----------------
-
-```raku
-my @chars = <A B C D E F 0 1 2 3>;
-my $ShortId = id-class('ShortId', 'sh', 24, @chars);
-```
-
-Exporting and importing types
------------------------------
-
-```raku
-# in Ids.rakumod
-use IdClass;
-
-id-class('CustomerId');
-id-class('InvoiceId', 'INV');
-
-sub EXPORT() { IdClass.export }
-
-# in app.rakumod
-use Ids;
-
-my $customer = CustomerId.new;
-my $invoice = InvoiceId.new;
-```
-
-USE CASES
+FUNCTIONS
 =========
 
-  * Domain-specific ids (UserId, OrderId, InvoiceId) with fast type checks
+id-class
+--------
 
-  * Readable prefixes for debugging, logging, and tracing
+```raku
+id-class(Str $name, Str $prefix = $name, UInt $size?, @chars?)
+```
 
-  * Sortable ids using timestamp-first encoding
+Creates a new class with the given name that does `IdClass` and uses `$prefix` for its string representation. The returned type can be stored with a sigiled lexical (`\TypeName`) and used like any class.
 
-  * Compact ids without external dependencies
+EXPORTS
+=======
 
-NOTES
-=====
+Using `IdClass` exports a mapping of known IdClass-derived types. This is used internally for coercion by prefix when only a string is provided.
 
-  * The random suffix is generated from `@default-chars` in this module.
+COERCION RULES
+==============
 
-  * `COERCE` only succeeds for prefixes registered with `id-class`.
+- A string must match `PREFIX-TS-REST` with three word-like segments. - If coercing into a specific IdClass-derived type, the prefix must match. - If coercing into `IdClass` itself, the prefix selects the registered type. - Invalid strings throw an exception.
+
+EXAMPLES
+========
+
+```raku
+use IdClass;
+
+class UserId does IdClass {
+    method prefix { "USR" }
+}
+
+class SessionId does IdClass {
+    method prefix { "SES" }
+}
+
+my UserId $user-id = UserId.new;
+my Str $stored = $user-id.Str;      # save to storage
+
+# Later: restore from storage
+my UserId $restored = UserId($stored);
+
+# Function parameters can coerce from Str
+sub open-session(SessionId() $sid) {
+    say "open {$sid}";
+}
+
+open-session SessionId.new.Str;
+
+# Parse a generic string into the right type
+my IdClass $any = IdClass($stored);
+say $any.^name;                     # UserId
+```
+
+SEE ALSO
+========
+
+Raku Pod6/Rakudoc: https://docs.raku.org/language/pod
 

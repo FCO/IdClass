@@ -1,0 +1,177 @@
+=begin pod
+
+=head1 NAME
+
+IdClass - role and factory for typed string IDs
+
+=head1 SYNOPSIS
+
+=begin code :lang<raku>
+
+use IdClass;
+
+class BlaId does IdClass {
+    method prefix { "BLA" }
+}
+
+my BlaId $id = BlaId.new;
+say $id;              # BLA-<ts>-<rest>
+
+my Str $raw = $id.Str;
+my BlaId $from-str = BlaId($raw);
+say $from-str === $id; # True
+
+sub load-item(BlaId() $item-id) {
+    say "loading {$item-id}";
+}
+
+load-item $raw;   # coerces Str into BlaId
+
+# Optional factory for a new type
+my \OrderId = id-class "OrderId";
+my OrderId $order-id = OrderId.new;
+
+=end code
+
+=head1 DESCRIPTION
+
+IdClass provides a compact, typed identifier object with predictable string
+format and fast coercion from strings. The default string representation is:
+
+    PREFIX-TS-REST
+
+Where C<PREFIX> is a short, human-readable prefix, C<TS> is a time-based
+segment, and C<REST> is a random segment. The role can be used directly in a
+class with a custom C<prefix> method, or via the C<id-class> factory.
+
+=head1 ROLE
+
+=begin code :lang<raku>
+
+role IdClass[Str $prefix = "", UInt $size = 40, @chars = @default-chars]
+
+=end code
+
+The role parameter C<$prefix> sets a default prefix used for stringification
+and coercion. The generated identifier length depends on C<$size> and the
+current timestamp length. The optional C<@chars> controls the character set
+used for the random portion when generating identifiers.
+
+=head1 METHODS
+
+=head2 prefix
+
+=begin code :lang<raku>
+
+method prefix
+
+=end code
+
+Returns the prefix string. When using the role without a fixed parameter, you
+can override this method in your class to supply the prefix.
+
+=head2 Str
+
+=begin code :lang<raku>
+
+method Str
+
+=end code
+
+Returns the canonical string representation C<PREFIX-TS-REST>.
+
+=head2 gist
+
+=begin code :lang<raku>
+
+method gist
+
+=end code
+
+Same as C<Str>.
+
+=head2 COERCE
+
+=begin code :lang<raku>
+
+method COERCE(Str $id)
+
+=end code
+
+Coerces a string into an appropriate IdClass-derived type based on the prefix
+in the string, or into the current class when the prefix matches.
+
+=head2 WHICH
+
+=begin code :lang<raku>
+
+method WHICH
+
+=end code
+
+Provides identity semantics based on the class name and string value.
+
+=head1 FUNCTIONS
+
+=head2 id-class
+
+=begin code :lang<raku>
+
+id-class(Str $name, Str $prefix = $name, UInt $size?, @chars?)
+
+=end code
+
+Creates a new class with the given name that does C<IdClass> and uses C<$prefix>
+for its string representation. The returned type can be stored with a sigiled
+lexical (C<\TypeName>) and used like any class.
+
+=head1 EXPORTS
+
+Using C<IdClass> exports a mapping of known IdClass-derived types. This is used
+internally for coercion by prefix when only a string is provided.
+
+=head1 COERCION RULES
+
+- A string must match C<PREFIX-TS-REST> with three word-like segments.
+- If coercing into a specific IdClass-derived type, the prefix must match.
+- If coercing into C<IdClass> itself, the prefix selects the registered type.
+- Invalid strings throw an exception.
+
+=head1 EXAMPLES
+
+=begin code :lang<raku>
+
+use IdClass;
+
+class UserId does IdClass {
+    method prefix { "USR" }
+}
+
+class SessionId does IdClass {
+    method prefix { "SES" }
+}
+
+my UserId $user-id = UserId.new;
+my Str $stored = $user-id.Str;      # save to storage
+
+# Later: restore from storage
+my UserId $restored = UserId($stored);
+
+# Function parameters can coerce from Str
+sub open-session(SessionId() $sid) {
+    say "open {$sid}";
+}
+
+open-session SessionId.new.Str;
+
+# Parse a generic string into the right type
+my IdClass $any = IdClass($stored);
+say $any.^name;                     # UserId
+
+=end code
+
+=head1 SEE ALSO
+
+Raku Pod6/Rakudoc: https://docs.raku.org/language/pod
+
+=end pod
