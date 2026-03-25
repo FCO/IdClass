@@ -2,6 +2,12 @@ Revision history for IdClass
 
 {{$NEXT}}
 
+0.0.3  2026-03-25T23:50:49Z
+    - Remove id-class factory and role parameters from docs/tests
+    - Document class-only coercion and note IdClass coercion pending
+    - Add ts-scale option and update tests/documentation
+    - Align tests with size semantics and new class definitions
+
 0.0.2  2026-03-25T00:55:40Z
     - Add Pod6/Rakudoc documentation
 

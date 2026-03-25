@@ -3,7 +3,7 @@
 NAME
 ====
 
-IdClass - role and factory for typed string IDs
+IdClass - role for typed string IDs
 
 SYNOPSIS
 ========
@@ -27,10 +27,6 @@ sub load-item(BlaId() $item-id) {
 }
 
 load-item $raw;   # coerces Str into BlaId
-
-# Optional factory for a new type
-my \OrderId = id-class "OrderId";
-my OrderId $order-id = OrderId.new;
 ```
 
 DESCRIPTION
@@ -40,16 +36,12 @@ IdClass provides a compact, typed identifier object with predictable string form
 
     PREFIX-TS-REST
 
-Where `PREFIX` is a short, human-readable prefix, `TS` is a time-based segment, and `REST` is a random segment. The role can be used directly in a class with a custom `prefix` method, or via the `id-class` factory.
+Where `PREFIX` is a short, human-readable prefix, `TS` is a time-based segment, and `REST` is a random segment. The role is used directly in a class with custom methods like `prefix`, `size`, `chars`, and `ts-scale`.
 
 ROLE
 ====
 
-```raku
-role IdClass[Str $prefix = "", UInt $size = 40, @chars = @default-chars]
-```
-
-The role parameter `$prefix` sets a default prefix used for stringification and coercion. The generated identifier length depends on `$size` and the current timestamp length. The optional `@chars` controls the character set used for the random portion when generating identifiers.
+Use the role directly in a class and override the configuration methods when needed.
 
 METHODS
 =======
@@ -61,7 +53,34 @@ prefix
 method prefix
 ```
 
-Returns the prefix string. When using the role without a fixed parameter, you can override this method in your class to supply the prefix.
+Returns the prefix string. Override this method in your class to supply the prefix.
+
+size
+----
+
+```raku
+method size
+```
+
+Returns the total size target used to compute the random segment length. The default is 40.
+
+chars
+-----
+
+```raku
+method chars
+```
+
+Returns the character list used to generate the random segment.
+
+ts-scale
+--------
+
+```raku
+method ts-scale
+```
+
+Returns the numeric scale applied to `now` when generating the timestamp segment. The default is 1000000.
 
 Str
 ---
@@ -88,7 +107,7 @@ COERCE
 method COERCE(Str $id)
 ```
 
-Coerces a string into an appropriate IdClass-derived type based on the prefix in the string, or into the current class when the prefix matches.
+Coerces a string into the current class when the prefix matches. Coercion into `IdClass` itself is not implemented yet; only class-specific coercion is supported.
 
 WHICH
 -----
@@ -102,24 +121,12 @@ Provides identity semantics based on the class name and string value.
 FUNCTIONS
 =========
 
-id-class
---------
-
-```raku
-id-class(Str $name, Str $prefix = $name, UInt $size?, @chars?)
-```
-
-Creates a new class with the given name that does `IdClass` and uses `$prefix` for its string representation. The returned type can be stored with a sigiled lexical (`\TypeName`) and used like any class.
-
-EXPORTS
-=======
-
-Using `IdClass` exports a mapping of known IdClass-derived types. This is used internally for coercion by prefix when only a string is provided.
+There are no helper factory functions. Define a class that does `IdClass` directly.
 
 COERCION RULES
 ==============
 
-- A string must match `PREFIX-TS-REST` with three word-like segments. - If coercing into a specific IdClass-derived type, the prefix must match. - If coercing into `IdClass` itself, the prefix selects the registered type. - Invalid strings throw an exception.
+- A string must match `PREFIX-TS-REST` with three word-like segments. - If coercing into a specific IdClass-derived type, the prefix must match. - Coercion into `IdClass` itself is not implemented yet. - Invalid strings throw an exception.
 
 EXAMPLES
 ========
@@ -135,6 +142,17 @@ class SessionId does IdClass {
     method prefix { "SES" }
 }
 
+class ShortId does IdClass {
+    method prefix { "SHR" }
+    method size   { 20 }
+    method chars  { <A B C 1 2 3> }
+}
+
+class FastId does IdClass {
+    method prefix            { "FST" }
+    method ts-scale          { 1000 }
+}
+
 my UserId $user-id = UserId.new;
 my Str $stored = $user-id.Str;      # save to storage
 
@@ -147,10 +165,6 @@ sub open-session(SessionId() $sid) {
 }
 
 open-session SessionId.new.Str;
-
-# Parse a generic string into the right type
-my IdClass $any = IdClass($stored);
-say $any.^name;                     # UserId
 ```
 
 SEE ALSO

@@ -1,14 +1,25 @@
 use Test;
 use IdClass;
 
-my \AlphaId = id-class("AlphaId");
-my \BetaId = id-class("BetaId");
+class AlphaId does IdClass {
+	method prefix { "AlphaId" }
+}
+class BetaId does IdClass {
+	method prefix { "BetaId" }
+}
 
-my $single = AlphaId.export;
-ok $single<AlphaId>:exists, "single export includes type";
+my $alpha = AlphaId.new;
+my $beta = BetaId.new;
 
-my $all = IdClass.export;
-ok $all<AlphaId>:exists, "all export includes AlphaId";
-ok $all<BetaId>:exists, "all export includes BetaId";
+isa-ok $alpha, AlphaId, "AlphaId instance";
+isa-ok $beta, BetaId, "BetaId instance";
+like $alpha.Str, /^ "AlphaId" "-" \w+ "-" \w+ $/, "AlphaId Str format";
+like $beta.Str, /^ "BetaId" "-" \w+ "-" \w+ $/, "BetaId Str format";
+
+my Str() $str-alpha = $alpha;
+my Str() $str-beta  = $beta;
+
+is $str-alpha, $alpha;
+is $str-beta , $beta;
 
 done-testing;

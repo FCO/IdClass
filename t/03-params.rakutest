@@ -2,10 +2,21 @@ use Test;
 use IdClass;
 
 my @chars = <A B C 1 2 3>;
-my \TinyId = id-class("TinyId", "T", 27, @chars);
+class TinyId does IdClass {
+	method prefix { "T" }
+	method size { 27 }
+	method chars { @chars }
+}
+
+class FastId does IdClass {
+	method prefix { "F" }
+	method ts-scale { 1000 }
+}
 my $id = TinyId.new;
+my $fast = FastId.new;
 
 is $id.prefix, "T", "custom prefix";
-is $id.Str.chars, "T".chars + 28, "custom size reflected in Str length";
+is $id.Str.chars, 27, "custom size reflected in Str length";
+is $fast.ts-scale, 1000, "custom ts scale";
 
 done-testing;

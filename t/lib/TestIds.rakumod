@@ -1,6 +1,11 @@
 use IdClass;
 
-id-class("CustomerId");
-id-class("InvoiceId", "INV", 35, <A B C 1 2 3>);
+class CustomerId does IdClass {
+	method prefix { "CustomerId" }
+}
 
-sub EXPORT() { IdClass.export }
+class InvoiceId does IdClass {
+	method prefix { "INV" }
+	method size { 40 }
+	method chars { <A B C 1 2 3> }
+}

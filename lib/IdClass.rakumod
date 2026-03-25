@@ -1,70 +1,40 @@
-my %types;
+unit role IdClass;
 
-my @default-chars = (|^10, |("A".."Z"), |("a".."z"));
+has Str $.ts   = self!ts;
+has Str $.rest = self!gen-rest;
 
-unit role IdClass[Str $prefix = "", UInt $size = 40, @chars = @default-chars];
-
-sub to-base64(Int() $int --> Str) {
-	my @use-chars = @chars.elems ?? @chars !! @default-chars;
-	@use-chars[$int.polymod(@use-chars.elems xx *).reverse].join;
+method !to-base64(Int() $int --> Str) {
+	self.chars[$int.polymod(self.chars.elems xx *).reverse].join;
 }
 
-sub ts {
-	my $ts = floor now * 1000000;
-	to-base64 $ts;
-}
-
-sub gen-id(UInt $size where $size > 1 = 30) {
-	my $id = @default-chars.roll($size).join;
+method !gen-rest(UInt $size where $size > 1 = $.size) {
+	my $diff      = 2 + $.ts.chars + self.prefix.chars;
+	my $rest-size = $size - $diff;
+	die "Id size is too small" if $rest-size < 1;
+	my $id = self.chars.roll($rest-size).join;
 	$id
 }
 
-method prefix { $prefix }
-has Str $.ts     = ts;
-has Str $.rest   = gen-id(($size // 40) - 1 - $!ts.chars);
+method size { 40 }
+
+method chars { |^10, |("A".."Z"), |("a".."z") }
+
+method ts-scale { 1000000 }
+
+method !ts {
+	my $ts = floor now * $.ts-scale;
+	self!to-base64: $ts;
+}
 
 multi method Str(::?CLASS:D:) { "{$.prefix}-{$!ts}-{$!rest}" }
 multi method gist(::?CLASS:D:) { $.Str }
 
-multi method COERCE(Str $id where { $prefix && .starts-with: $prefix }) {
-	if $id ~~ /^ (\w+) "-" (\w+) "-" (\w+) $/ {
-		return self.new: :ts(~$1), :rest(~$2)
-	}
-	die "'$id' is not a valid id"
-}
-
-multi method COERCE(\SELF where { .WHAT !=:= IdClass }: Str $id where { $.prefix && .starts-with: $.prefix }) {
-	if $id ~~ /^ (\w+) "-" (\w+) "-" (\w+) $/ && $0 eq $.prefix {
-		return self.new: :ts(~$1), :rest(~$2)
-	}
-	die "'$id' is not a valid id"
-}
-
-multi method COERCE(Str $id) {
-	if $id ~~ /^ (\w+) "-" (\w+) "-" (\w+) $/ {
-		return unless %types{~$0}:exists;
-		return %types{~$0}.new: :prefix(~$0), :ts(~$1), :rest(~$2)
+multi method COERCE(Str $id where *.starts-with: $.prefix) {
+	if $id ~~ /^ \w+ "-" (\w+) "-" (\w+) $/ {
+		return self.new: :ts(~$0), :rest(~$1)
 	}
 	die "'$id' is not a valid id"
 }
 
 multi method WHICH(::?CLASS:D:) { ValueObjAt.new: "{self.^name}|{self.Str}" }
 multi method WHICH(::?CLASS:U:) { ValueObjAt.new: self.^name }
-
-multi method export(IdClass:U \SELF where {.^name eq "IdClass"}:) {
-	Map.new: %types.values.map: {
-		.^name => .self
-	}
-}
-
-multi method export(IdClass:U:) {
-	Map.new: ($.^name => self)
-}
-
-quietly %types{$prefix || ::?CLASS.?prefix} := ::?CLASS;
-sub id-class(Str $name, Str $prefix = $name, UInt $size?, @chars?) is export {
-	my \id-class-type = Metamodel::ClassHOW.new_type: :$name;
-	id-class-type.^add_role: IdClass[$prefix, $size, @chars];
-	id-class-type.^compose;
-	return id-class-type
-}

@@ -1,32 +1,30 @@
 use IdClass;
 use Test;
 
-my IdClass() $id;
+class Id1 does IdClass {
+	method prefix { "Id1" }
+}
+ok my $id1 = Id1.new;
+isa-ok $id1, Id1;
 
-my \Id1 = id-class "Id1";
-ok my Str() $id1 = Id1.new;
-$id = $id1;
-isa-ok $id, Id1;
-is $id, $id1;
-
-my &a1 := -> IdClass() $a, Str() $b = $a {
+my &a1 := -> Id1() $a, Str() $b = $a {
 	isa-ok $a, Id1;
 	is $a, $b;
 	b1 $a
 }
 
-my &b1 := -> IdClass $a, Str() $b = $a {
+my &b1 := -> Id1 $a, Str() $b = $a {
 	isa-ok $a, Id1;
 	is $a, $b;
 }
 
-a1 $id.Str;
+a1 $id1.Str;
 
-class Id2 does IdClass["Id2"] {}
+class Id2 does IdClass {
+	method prefix { "Id2" }
+}
 ok my $id2 = Id2.new;
-$id = $id2;
-isa-ok $id, Id2;
-is $id, $id2;
+isa-ok $id2, Id2;
 
 my &a2 := -> Id2() $a, Str() $b = $a {
 	isa-ok $a, Id2;
@@ -39,15 +37,13 @@ my &b2 := -> Id2 $a, Str() $b = $a {
 	is $a, $b;
 }
 
-a2 $id.Str;
+a2 $id2.Str;
 
 class Id3 does IdClass {
 	method prefix { "Id3" }
 }
 ok my $id3 = Id3.new;
-$id = $id3;
-isa-ok $id, Id3;
-is $id, $id3;
+isa-ok $id3, Id3;
 
 my &a3 := -> Id3() $a, Str() $b = $a {
 	isa-ok $a, Id3;
@@ -60,6 +56,6 @@ my &b3 := -> Id3 $a, Str() $b = $a {
 	is $a, $b;
 }
 
-a3 $id.Str;
+a3 $id3.Str;
 
 done-testing
